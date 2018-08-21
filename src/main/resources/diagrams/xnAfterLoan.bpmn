@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:activiti="http://activiti.org/bpmn" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" typeLanguage="http://www.w3.org/2001/XMLSchema" expressionLanguage="http://www.w3.org/1999/XPath" targetNamespace="http://www.activiti.org/test">
+  <process id="xnAfterLoan" name="休宁贷后检查审批流程" isExecutable="true">
+    <extensionElements>
+      <activiti:executionListener event="end" delegateExpression="${afterEndProcess}"></activiti:executionListener>
+    </extensionElements>
+    <userTask id="usertask1" name="一级支行行长" activiti:assignee="${firstBranchUser}" activiti:formKey="/cps/form/actAfterZHHZApprove">
+      <extensionElements>
+        <activiti:taskListener event="create" delegateExpression="${afterActCreateSmsSendEvent}"></activiti:taskListener>
+      </extensionElements>
+    </userTask>
+    <startEvent id="startevent1" name="Start"></startEvent>
+    <exclusiveGateway id="exclusivegateway1" name="Exclusive Gateway"></exclusiveGateway>
+    <sequenceFlow id="flow1" sourceRef="startevent1" targetRef="usertask4"></sequenceFlow>
+    <sequenceFlow id="flow2" name="二级支行提交，金额在10万以上，50万以下（包含）" sourceRef="exclusivegateway1" targetRef="usertask1">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${isFirstBank == '0' && applySum>100000 && applySum <=500000}]]></conditionExpression>
+    </sequenceFlow>
+    <userTask id="usertask2" name="业务管理部" activiti:candidateGroups="ROLE_BUSINESS" activiti:formKey="/cps/form/actAfterYWGLBApprove">
+      <extensionElements>
+        <activiti:taskListener event="create" delegateExpression="${afterActCreateSmsSendEvent}"></activiti:taskListener>
+      </extensionElements>
+    </userTask>
+    <sequenceFlow id="flow3" name="金额在50万以上，100万以下（包含）" sourceRef="exclusivegateway1" targetRef="usertask2">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${applySum>500000 && applySum <=1000000}]]></conditionExpression>
+    </sequenceFlow>
+    <userTask id="usertask3" name="贷后审批小组" activiti:assignee="${dhspzUser}" activiti:formKey="/cps/form/actAfterSPXZApprove">
+      <extensionElements>
+        <activiti:taskListener event="create" delegateExpression="${afterActCreateSmsSendEvent}"></activiti:taskListener>
+      </extensionElements>
+      <multiInstanceLoopCharacteristics isSequential="false" activiti:collection="dhspzUserList" activiti:elementVariable="dhspzUser"></multiInstanceLoopCharacteristics>
+    </userTask>
+    <sequenceFlow id="flow4" name="金额在100w以上" sourceRef="exclusivegateway1" targetRef="usertask3">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${applySum>1000000}]]></conditionExpression>
+    </sequenceFlow>
+    <userTask id="usertask4" name="本级支行行长" activiti:assignee="${thisBranchUser}" activiti:formKey="/cps/form/actAfterZHHZApprove">
+      <extensionElements>
+        <activiti:taskListener event="create" delegateExpression="${afterActCreateSmsSendEvent}"></activiti:taskListener>
+      </extensionElements>
+    </userTask>
+    <sequenceFlow id="flow5" sourceRef="usertask4" targetRef="exclusivegateway1"></sequenceFlow>
+    <endEvent id="endevent1" name="End"></endEvent>
+    <sequenceFlow id="flow6" sourceRef="usertask1" targetRef="endevent1"></sequenceFlow>
+    <sequenceFlow id="flow7" sourceRef="usertask2" targetRef="endevent1"></sequenceFlow>
+    <sequenceFlow id="flow8" sourceRef="servicetask1" targetRef="endevent1"></sequenceFlow>
+    <sequenceFlow id="flow10" name="根据是否是一级支行，一级支行的话，金额在50万之内（包含）；二级支行的话，金额在10万之内（包含）" sourceRef="exclusivegateway1" targetRef="endevent1">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${ (isFirstBank == '1' && applySum <=500000) || (isFirstBank == '0' && applySum <=100000)}]]></conditionExpression>
+    </sequenceFlow>
+    <serviceTask id="servicetask1" name="贷后审批小组会签" activiti:class="${dhspzCounterSignService}"></serviceTask>
+    <sequenceFlow id="flow11" sourceRef="usertask3" targetRef="servicetask1"></sequenceFlow>
+  </process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_xnAfterLoan">
+    <bpmndi:BPMNPlane bpmnElement="xnAfterLoan" id="BPMNPlane_xnAfterLoan">
+      <bpmndi:BPMNShape bpmnElement="usertask1" id="BPMNShape_usertask1">
+        <omgdc:Bounds height="55.0" width="105.0" x="490.0" y="83.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="startevent1" id="BPMNShape_startevent1">
+        <omgdc:Bounds height="35.0" width="35.0" x="0.0" y="0.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="exclusivegateway1" id="BPMNShape_exclusivegateway1">
+        <omgdc:Bounds height="40.0" width="40.0" x="280.0" y="127.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="usertask2" id="BPMNShape_usertask2">
+        <omgdc:Bounds height="55.0" width="105.0" x="490.0" y="200.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="usertask3" id="BPMNShape_usertask3">
+        <omgdc:Bounds height="55.0" width="105.0" x="490.0" y="280.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="usertask4" id="BPMNShape_usertask4">
+        <omgdc:Bounds height="55.0" width="105.0" x="110.0" y="119.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="endevent1" id="BPMNShape_endevent1">
+        <omgdc:Bounds height="35.0" width="35.0" x="850.0" y="130.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="servicetask1" id="BPMNShape_servicetask1">
+        <omgdc:Bounds height="71.0" width="122.0" x="679.0" y="272.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge bpmnElement="flow1" id="BPMNEdge_flow1">
+        <omgdi:waypoint x="17.0" y="35.0"></omgdi:waypoint>
+        <omgdi:waypoint x="17.0" y="146.0"></omgdi:waypoint>
+        <omgdi:waypoint x="110.0" y="146.0"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow2" id="BPMNEdge_flow2">
+        <omgdi:waypoint x="300.0" y="127.0"></omgdi:waypoint>
+        <omgdi:waypoint x="367.0" y="110.0"></omgdi:waypoint>
+        <omgdi:waypoint x="490.0" y="110.0"></omgdi:waypoint>
+        <bpmndi:BPMNLabel>
+          <omgdc:Bounds height="42.0" width="180.0" x="-77.0" y="-1.0"></omgdc:Bounds>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow3" id="BPMNEdge_flow3">
+        <omgdi:waypoint x="300.0" y="167.0"></omgdi:waypoint>
+        <omgdi:waypoint x="361.0" y="227.0"></omgdi:waypoint>
+        <omgdi:waypoint x="477.0" y="227.0"></omgdi:waypoint>
+        <omgdi:waypoint x="490.0" y="227.0"></omgdi:waypoint>
+        <bpmndi:BPMNLabel>
+          <omgdc:Bounds height="42.0" width="180.0" x="-54.0" y="0.0"></omgdc:Bounds>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow4" id="BPMNEdge_flow4">
+        <omgdi:waypoint x="300.0" y="167.0"></omgdi:waypoint>
+        <omgdi:waypoint x="300.0" y="307.0"></omgdi:waypoint>
+        <omgdi:waypoint x="490.0" y="307.0"></omgdi:waypoint>
+        <bpmndi:BPMNLabel>
+          <omgdc:Bounds height="14.0" width="88.0" x="17.0" y="3.0"></omgdc:Bounds>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow5" id="BPMNEdge_flow5">
+        <omgdi:waypoint x="215.0" y="146.0"></omgdi:waypoint>
+        <omgdi:waypoint x="280.0" y="147.0"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow6" id="BPMNEdge_flow6">
+        <omgdi:waypoint x="595.0" y="110.0"></omgdi:waypoint>
+        <omgdi:waypoint x="801.0" y="110.0"></omgdi:waypoint>
+        <omgdi:waypoint x="867.0" y="130.0"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow7" id="BPMNEdge_flow7">
+        <omgdi:waypoint x="595.0" y="227.0"></omgdi:waypoint>
+        <omgdi:waypoint x="814.0" y="227.0"></omgdi:waypoint>
+        <omgdi:waypoint x="867.0" y="165.0"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow8" id="BPMNEdge_flow8">
+        <omgdi:waypoint x="801.0" y="307.0"></omgdi:waypoint>
+        <omgdi:waypoint x="867.0" y="307.0"></omgdi:waypoint>
+        <omgdi:waypoint x="867.0" y="165.0"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow10" id="BPMNEdge_flow10">
+        <omgdi:waypoint x="300.0" y="127.0"></omgdi:waypoint>
+        <omgdi:waypoint x="300.0" y="8.0"></omgdi:waypoint>
+        <omgdi:waypoint x="578.0" y="8.0"></omgdi:waypoint>
+        <omgdi:waypoint x="730.0" y="8.0"></omgdi:waypoint>
+        <omgdi:waypoint x="867.0" y="8.0"></omgdi:waypoint>
+        <omgdi:waypoint x="867.0" y="24.0"></omgdi:waypoint>
+        <omgdi:waypoint x="867.0" y="90.0"></omgdi:waypoint>
+        <omgdi:waypoint x="867.0" y="130.0"></omgdi:waypoint>
+        <bpmndi:BPMNLabel>
+          <omgdc:Bounds height="56.0" width="200.0" x="-105.0" y="2.0"></omgdc:Bounds>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow11" id="BPMNEdge_flow11">
+        <omgdi:waypoint x="595.0" y="307.0"></omgdi:waypoint>
+        <omgdi:waypoint x="679.0" y="307.0"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>

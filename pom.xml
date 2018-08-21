@@ -14,7 +14,7 @@
 
   <properties>
   	<ahpu.tpc.version>1.0.1.SNAPSHOT</ahpu.tpc.version>
-	<activiti-version>5.14</activiti-version>
+	<activiti-version>5.22.0</activiti-version>
 </properties>
 	
 	<dependencies>
@@ -72,5 +72,13 @@
 			<artifactId>pop3</artifactId>
 			<version>1.4.4</version>
 		</dependency>
+		
+		 <dependency>
+	      <groupId>cn.jhs.ojdbc</groupId>
+	      <artifactId>ojdbc</artifactId>
+	      <version>7</version>
+	      <scope>system</scope>
+	      <systemPath>${project.basedir}/lib/ojdbc7.jar</systemPath>
+	    </dependency>
 	</dependencies>
 </project>

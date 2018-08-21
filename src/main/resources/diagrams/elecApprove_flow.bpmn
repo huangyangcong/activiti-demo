@@ -1,0 +1,421 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:activiti="http://activiti.org/bpmn" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" typeLanguage="http://www.w3.org/2001/XMLSchema" expressionLanguage="http://www.w3.org/1999/XPath" targetNamespace="http://www.activiti.org/test">
+  <process id="elecApprove" name="电子审批" isExecutable="true">
+    <extensionElements>
+      <activiti:eventListener events="TIMER_FIRED" entityType="job" delegateExpression="${jobTimeFiredAutoCompleteListener}"></activiti:eventListener>
+    </extensionElements>
+    <startEvent id="startevent1" name="Start"></startEvent>
+    <userTask id="apply" name="企业申请" activiti:formKey="/elecApply/qualapply/qualificationInfo">
+      <extensionElements>
+        <activiti:taskListener event="create" expression="#{userTaskEventListener.onCreate(task, task.eventName)}"></activiti:taskListener>
+        <activiti:taskListener event="complete" expression="#{userTaskEventListener.onComplete(task, task.eventName)}"></activiti:taskListener>
+      </extensionElements>
+    </userTask>
+    <sequenceFlow id="flow1" sourceRef="startevent1" targetRef="apply"></sequenceFlow>
+    <userTask id="provinceAccept" name="省厅受理" activiti:formKey="/electronicApproval/provincialAcceptance">
+      <extensionElements>
+        <activiti:formProperty id="provinceAcceptPass" name="是否受理" type="enum">
+          <activiti:value id="10" name="受理"></activiti:value>
+          <activiti:value id="20" name="不予受理"></activiti:value>
+        </activiti:formProperty>
+        <activiti:taskListener event="create" expression="#{userTaskEventListener.onCreate(task, task.eventName)}"></activiti:taskListener>
+        <activiti:taskListener event="complete" expression="#{userTaskEventListener.onComplete(task, task.eventName)}"></activiti:taskListener>
+      </extensionElements>
+    </userTask>
+    <serviceTask id="cancelServiceTask" name="不通过业务处理" activiti:delegateExpression="${serviceTaskDelegate}"></serviceTask>
+    <userTask id="provinceFirst" name="初审" activiti:candidateUsers="${approveOperatorCollection}" activiti:formKey="/electronicApproval/provincialTrial">
+      <extensionElements>
+        <activiti:formProperty id="needLegalReviewPass" name="需要法制审核" type="enum" required="true">
+          <activiti:value id="10" name="需要"></activiti:value>
+          <activiti:value id="20" name="不需要"></activiti:value>
+        </activiti:formProperty>
+        <activiti:taskListener event="complete" expression="#{userTaskEventListener.onComplete(task, task.eventName)}"></activiti:taskListener>
+      </extensionElements>
+    </userTask>
+    <userTask id="outterApprove" name="外厅审核" activiti:formKey="/electronicApproval/externalAudits">
+      <extensionElements>
+        <activiti:taskListener event="create" expression="#{userTaskEventListener.onCreate(task, task.eventName)}"></activiti:taskListener>
+        <activiti:taskListener event="complete" expression="#{userTaskEventListener.onComplete(task, task.eventName)}"></activiti:taskListener>
+      </extensionElements>
+    </userTask>
+    <userTask id="provinceCheck" name="复审" activiti:candidateUsers="${approveOperatorCollection}" activiti:formKey="/electronicApproval/provincialRetrial">
+      <extensionElements>
+        <activiti:taskListener event="complete" expression="#{userTaskEventListener.onComplete(task, task.eventName)}"></activiti:taskListener>
+      </extensionElements>
+    </userTask>
+    <userTask id="legalReview" name="法制审核" activiti:candidateUsers="${legalOperatorCollection}" activiti:formKey="/electronicApproval/provincialLegalReview">
+      <extensionElements>
+        <activiti:taskListener event="complete" expression="#{userTaskEventListener.onComplete(task, task.eventName)}"></activiti:taskListener>
+      </extensionElements>
+    </userTask>
+    <userTask id="provinceApprove" name="审核" activiti:candidateUsers="${approveOperatorCollection}" activiti:formKey="/electronicApproval/provincialExamine">
+      <extensionElements>
+        <activiti:taskListener event="complete" expression="#{userTaskEventListener.onComplete(task, task.eventName)}"></activiti:taskListener>
+      </extensionElements>
+    </userTask>
+    <userTask id="provinceDecide" name="决定" activiti:candidateUsers="${approveOperatorCollection}" activiti:formKey="/electronicApproval/provincialDecision">
+      <extensionElements>
+        <activiti:formProperty id="finalDecidePass" name="决定" type="enum">
+          <activiti:value id="10" name="予以许可"></activiti:value>
+          <activiti:value id="90" name="不予许可"></activiti:value>
+        </activiti:formProperty>
+        <activiti:taskListener event="complete" expression="#{userTaskEventListener.onComplete(task, task.eventName)}"></activiti:taskListener>
+      </extensionElements>
+    </userTask>
+    <sequenceFlow id="flow25" sourceRef="provinceApprove" targetRef="provinceDecide"></sequenceFlow>
+    <exclusiveGateway id="exclusivegateway6" name="Exclusive Gateway"></exclusiveGateway>
+    <sequenceFlow id="flow29" sourceRef="provinceDecide" targetRef="exclusivegateway6"></sequenceFlow>
+    <serviceTask id="agreeServiceTask" name="通过业务处理(公示)" activiti:delegateExpression="${serviceTaskDelegate}"></serviceTask>
+    <sequenceFlow id="flow31" name="予以许可" sourceRef="exclusivegateway6" targetRef="agreeServiceTask">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${finalDecidePass == 10}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="flow35" name="不予许可" sourceRef="exclusivegateway6" targetRef="cancelServiceTask"></sequenceFlow>
+    <endEvent id="endevent1" name="End"></endEvent>
+    <sequenceFlow id="flow36" sourceRef="cancelServiceTask" targetRef="endevent1"></sequenceFlow>
+    <sequenceFlow id="flow37" sourceRef="agreeServiceTask" targetRef="endevent1"></sequenceFlow>
+    <userTask id="suggestUsertask" name="征求意见" activiti:assignee="${suggestOperator}" activiti:formKey="/electronicApproval/adviceHandle">
+      <multiInstanceLoopCharacteristics isSequential="false" activiti:collection="partInOperatorCollection" activiti:elementVariable="suggestOperator">
+        <completionCondition>${multiInstance.completeTask(execution)}</completionCondition>
+      </multiInstanceLoopCharacteristics>
+    </userTask>
+    <serviceTask id="beforeParallelGatewayServiceTask" name="自动流转" activiti:delegateExpression="${serviceTaskDelegate}"></serviceTask>
+    <parallelGateway id="parallelgateway3" name="意见收集开始"></parallelGateway>
+    <sequenceFlow id="flow52" sourceRef="parallelgateway3" targetRef="provinceFirst"></sequenceFlow>
+    <sequenceFlow id="flow53" sourceRef="parallelgateway3" targetRef="suggestUsertask"></sequenceFlow>
+    <inclusiveGateway id="inclusivegateway1" name="Inclusive Gateway"></inclusiveGateway>
+    <sequenceFlow id="flow56" sourceRef="provinceFirst" targetRef="inclusivegateway1"></sequenceFlow>
+    <sequenceFlow id="flow57" name="执行" sourceRef="inclusivegateway1" targetRef="provinceCheck">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${approveOperatorCollection.size() > 0}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="flow58" name="选择执行" sourceRef="inclusivegateway1" targetRef="legalReview">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${needLegalReviewPass == 10}]]></conditionExpression>
+    </sequenceFlow>
+    <inclusiveGateway id="inclusivegateway2" name="Inclusive Gateway"></inclusiveGateway>
+    <parallelGateway id="parallelgateway5" name="意见收集结束"></parallelGateway>
+    <sequenceFlow id="flow63" sourceRef="suggestUsertask" targetRef="parallelgateway5"></sequenceFlow>
+    <sequenceFlow id="flow64" sourceRef="parallelgateway5" targetRef="provinceApprove"></sequenceFlow>
+    <serviceTask id="afterInclusiveGatewayServiceTask" name="自动流转" activiti:delegateExpression="${serviceTaskDelegate}"></serviceTask>
+    <sequenceFlow id="flow65" sourceRef="inclusivegateway2" targetRef="afterInclusiveGatewayServiceTask"></sequenceFlow>
+    <sequenceFlow id="flow66" sourceRef="afterInclusiveGatewayServiceTask" targetRef="parallelgateway5"></sequenceFlow>
+    <boundaryEvent id="boundarytimer1" name="Timer" attachedToRef="suggestUsertask" cancelActivity="false">
+      <timerEventDefinition>
+        <timeDuration>${suggestTimeDuration}</timeDuration>
+      </timerEventDefinition>
+    </boundaryEvent>
+    <boundaryEvent id="boundarytimer2" name="Timer" attachedToRef="legalReview" cancelActivity="false">
+      <timerEventDefinition>
+        <timeDuration>${legalTimeDuration}</timeDuration>
+      </timerEventDefinition>
+    </boundaryEvent>
+    <boundaryEvent id="boundarytimer3" name="Timer" attachedToRef="outterApprove" cancelActivity="false">
+      <timerEventDefinition>
+        <timeDuration>${outterApproveTimeDuration}</timeDuration>
+      </timerEventDefinition>
+    </boundaryEvent>
+    <sequenceFlow id="flow68" sourceRef="apply" targetRef="provinceAccept"></sequenceFlow>
+    <exclusiveGateway id="exclusivegateway7" name="Exclusive Gateway"></exclusiveGateway>
+    <sequenceFlow id="flow69" sourceRef="provinceAccept" targetRef="exclusivegateway7"></sequenceFlow>
+    <sequenceFlow id="flow71" name="不予受理" sourceRef="exclusivegateway7" targetRef="cancelServiceTask">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${provinceAcceptPass == 20}]]></conditionExpression>
+    </sequenceFlow>
+    <userTask id="outterAccept" name="外厅处理" activiti:formKey="/electronicApproval/provincialExternal">
+      <extensionElements>
+       <activiti:taskListener event="create" expression="#{userTaskEventListener.onCreate(task, task.eventName)}"></activiti:taskListener>
+       <activiti:taskListener event="complete" expression="#{userTaskEventListener.onComplete(task, task.eventName)}"></activiti:taskListener>
+      </extensionElements>
+    </userTask>
+    <sequenceFlow id="flow73" sourceRef="outterAccept" targetRef="outterApprove"></sequenceFlow>
+    <sequenceFlow id="flow74" sourceRef="outterApprove" targetRef="beforeParallelGatewayServiceTask"></sequenceFlow>
+    <exclusiveGateway id="exclusivegateway8" name="Exclusive Gateway"></exclusiveGateway>
+    <sequenceFlow id="flow75" name="受理" sourceRef="exclusivegateway7" targetRef="exclusivegateway8">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${provinceAcceptPass == 10}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="flow76" name="并联" sourceRef="exclusivegateway8" targetRef="outterAccept">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${needParallelPass == 10}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="flow77" name="不并联" sourceRef="exclusivegateway8" targetRef="beforeParallelGatewayServiceTask">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${needParallelPass == 20}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="flow78" sourceRef="provinceCheck" targetRef="inclusivegateway2"></sequenceFlow>
+    <sequenceFlow id="flow79" sourceRef="legalReview" targetRef="inclusivegateway2"></sequenceFlow>
+    <sequenceFlow id="flow80" sourceRef="beforeParallelGatewayServiceTask" targetRef="parallelgateway3"></sequenceFlow>
+    <boundaryEvent id="boundarytimer4" name="Timer" attachedToRef="provinceAccept" cancelActivity="false">
+      <timerEventDefinition>
+        <timeDuration>${provinceAcceptTimeDuration}</timeDuration>
+      </timerEventDefinition>
+    </boundaryEvent>
+    <boundaryEvent id="boundarytimer5" name="Timer" attachedToRef="outterAccept" cancelActivity="false">
+      <timerEventDefinition>
+        <timeDuration>${outterAcceptTimeDuration}</timeDuration>
+      </timerEventDefinition>
+    </boundaryEvent>
+    <boundaryEvent id="boundarytimer6" name="Timer" attachedToRef="provinceApprove" cancelActivity="false">
+      <timerEventDefinition>
+        <timeDuration>${provinceApproveTimeDuration}</timeDuration>
+      </timerEventDefinition>
+    </boundaryEvent>
+    <boundaryEvent id="boundarytimer7" name="Timer" attachedToRef="provinceDecide" cancelActivity="false">
+      <timerEventDefinition>
+        <timeDuration>${provinceDecideTimeDuration}</timeDuration>
+      </timerEventDefinition>
+    </boundaryEvent>
+    <boundaryEvent id="boundarytimer8" name="Timer" attachedToRef="provinceCheck" cancelActivity="false">
+      <timerEventDefinition>
+        <timeDuration>${provinceCheckTimeDuration}</timeDuration>
+      </timerEventDefinition>
+    </boundaryEvent>
+    <boundaryEvent id="boundarytimer9" name="Timer" attachedToRef="provinceFirst" cancelActivity="false">
+      <timerEventDefinition>
+        <timeDuration>${provinceFirstTimeDuration}</timeDuration>
+      </timerEventDefinition>
+    </boundaryEvent>
+  </process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_elecApprove">
+    <bpmndi:BPMNPlane bpmnElement="elecApprove" id="BPMNPlane_elecApprove">
+      <bpmndi:BPMNShape bpmnElement="startevent1" id="BPMNShape_startevent1">
+        <omgdc:Bounds height="35.0" width="35.0" x="32.0" y="1.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="apply" id="BPMNShape_apply">
+        <omgdc:Bounds height="55.0" width="115.0" x="165.0" y="35.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="provinceAccept" id="BPMNShape_provinceAccept">
+        <omgdc:Bounds height="55.0" width="105.0" x="170.0" y="125.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="boundarytimer4" id="BPMNShape_boundarytimer4">
+        <omgdc:Bounds height="30.0" width="30.0" x="250.0" y="155.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="cancelServiceTask" id="BPMNShape_cancelServiceTask">
+        <omgdc:Bounds height="55.0" width="105.0" x="658.0" y="590.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="provinceFirst" id="BPMNShape_provinceFirst">
+        <omgdc:Bounds height="55.0" width="105.0" x="400.0" y="100.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="boundarytimer9" id="BPMNShape_boundarytimer9">
+        <omgdc:Bounds height="30.0" width="30.0" x="480.0" y="140.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="outterApprove" id="BPMNShape_outterApprove">
+        <omgdc:Bounds height="55.0" width="105.0" x="165.0" y="428.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="boundarytimer3" id="BPMNShape_boundarytimer3">
+        <omgdc:Bounds height="30.0" width="30.0" x="254.0" y="455.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="provinceCheck" id="BPMNShape_provinceCheck">
+        <omgdc:Bounds height="55.0" width="105.0" x="328.0" y="236.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="boundarytimer8" id="BPMNShape_boundarytimer8">
+        <omgdc:Bounds height="30.0" width="30.0" x="408.0" y="276.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="legalReview" id="BPMNShape_legalReview">
+        <omgdc:Bounds height="55.0" width="105.0" x="466.0" y="236.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="boundarytimer2" id="BPMNShape_boundarytimer2">
+        <omgdc:Bounds height="30.0" width="30.0" x="541.0" y="264.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="provinceApprove" id="BPMNShape_provinceApprove">
+        <omgdc:Bounds height="55.0" width="105.0" x="400.0" y="501.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="boundarytimer6" id="BPMNShape_boundarytimer6">
+        <omgdc:Bounds height="30.0" width="30.0" x="480.0" y="541.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="provinceDecide" id="BPMNShape_provinceDecide">
+        <omgdc:Bounds height="55.0" width="105.0" x="550.0" y="501.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="boundarytimer7" id="BPMNShape_boundarytimer7">
+        <omgdc:Bounds height="30.0" width="30.0" x="630.0" y="541.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="exclusivegateway6" id="BPMNShape_exclusivegateway6">
+        <omgdc:Bounds height="40.0" width="40.0" x="690.0" y="508.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="agreeServiceTask" id="BPMNShape_agreeServiceTask">
+        <omgdc:Bounds height="55.0" width="124.0" x="831.0" y="501.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="endevent1" id="BPMNShape_endevent1">
+        <omgdc:Bounds height="35.0" width="35.0" x="877.0" y="600.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="suggestUsertask" id="BPMNShape_suggestUsertask">
+        <omgdc:Bounds height="55.0" width="105.0" x="600.0" y="100.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="boundarytimer1" id="BPMNShape_boundarytimer1">
+        <omgdc:Bounds height="30.0" width="30.0" x="675.0" y="128.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="beforeParallelGatewayServiceTask" id="BPMNShape_beforeParallelGatewayServiceTask">
+        <omgdc:Bounds height="55.0" width="105.0" x="165.0" y="523.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="parallelgateway3" id="BPMNShape_parallelgateway3">
+        <omgdc:Bounds height="40.0" width="40.0" x="432.0" y="42.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="inclusivegateway1" id="BPMNShape_inclusivegateway1">
+        <omgdc:Bounds height="40.0" width="40.0" x="432.0" y="188.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="inclusivegateway2" id="BPMNShape_inclusivegateway2">
+        <omgdc:Bounds height="40.0" width="40.0" x="434.0" y="293.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="parallelgateway5" id="BPMNShape_parallelgateway5">
+        <omgdc:Bounds height="40.0" width="40.0" x="432.0" y="435.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="afterInclusiveGatewayServiceTask" id="BPMNShape_afterInclusiveGatewayServiceTask">
+        <omgdc:Bounds height="55.0" width="105.0" x="400.0" y="360.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="exclusivegateway7" id="BPMNShape_exclusivegateway7">
+        <omgdc:Bounds height="40.0" width="40.0" x="202.0" y="201.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="outterAccept" id="BPMNShape_outterAccept">
+        <omgdc:Bounds height="55.0" width="105.0" x="165.0" y="341.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="boundarytimer5" id="BPMNShape_boundarytimer5">
+        <omgdc:Bounds height="30.0" width="30.0" x="255.0" y="381.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="exclusivegateway8" id="BPMNShape_exclusivegateway8">
+        <omgdc:Bounds height="40.0" width="40.0" x="202.0" y="271.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge bpmnElement="flow1" id="BPMNEdge_flow1">
+        <omgdi:waypoint x="67.0" y="18.0"></omgdi:waypoint>
+        <omgdi:waypoint x="226.0" y="18.0"></omgdi:waypoint>
+        <omgdi:waypoint x="222.0" y="35.0"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow25" id="BPMNEdge_flow25">
+        <omgdi:waypoint x="505.0" y="528.0"></omgdi:waypoint>
+        <omgdi:waypoint x="550.0" y="528.0"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow29" id="BPMNEdge_flow29">
+        <omgdi:waypoint x="655.0" y="528.0"></omgdi:waypoint>
+        <omgdi:waypoint x="690.0" y="528.0"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow31" id="BPMNEdge_flow31">
+        <omgdi:waypoint x="730.0" y="528.0"></omgdi:waypoint>
+        <omgdi:waypoint x="831.0" y="528.0"></omgdi:waypoint>
+        <bpmndi:BPMNLabel>
+          <omgdc:Bounds height="14.0" width="48.0" x="740.0" y="513.0"></omgdc:Bounds>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow35" id="BPMNEdge_flow35">
+        <omgdi:waypoint x="710.0" y="548.0"></omgdi:waypoint>
+        <omgdi:waypoint x="710.0" y="590.0"></omgdi:waypoint>
+        <bpmndi:BPMNLabel>
+          <omgdc:Bounds height="14.0" width="48.0" x="715.0" y="556.0"></omgdc:Bounds>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow36" id="BPMNEdge_flow36">
+        <omgdi:waypoint x="763.0" y="617.0"></omgdi:waypoint>
+        <omgdi:waypoint x="877.0" y="617.0"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow37" id="BPMNEdge_flow37">
+        <omgdi:waypoint x="893.0" y="556.0"></omgdi:waypoint>
+        <omgdi:waypoint x="894.0" y="600.0"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow52" id="BPMNEdge_flow52">
+        <omgdi:waypoint x="452.0" y="82.0"></omgdi:waypoint>
+        <omgdi:waypoint x="452.0" y="100.0"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow53" id="BPMNEdge_flow53">
+        <omgdi:waypoint x="472.0" y="62.0"></omgdi:waypoint>
+        <omgdi:waypoint x="652.0" y="62.0"></omgdi:waypoint>
+        <omgdi:waypoint x="652.0" y="100.0"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow56" id="BPMNEdge_flow56">
+        <omgdi:waypoint x="452.0" y="155.0"></omgdi:waypoint>
+        <omgdi:waypoint x="452.0" y="188.0"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow57" id="BPMNEdge_flow57">
+        <omgdi:waypoint x="432.0" y="208.0"></omgdi:waypoint>
+        <omgdi:waypoint x="380.0" y="207.0"></omgdi:waypoint>
+        <omgdi:waypoint x="380.0" y="236.0"></omgdi:waypoint>
+        <bpmndi:BPMNLabel>
+          <omgdc:Bounds height="14.0" width="24.0" x="390.0" y="188.0"></omgdc:Bounds>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow58" id="BPMNEdge_flow58">
+        <omgdi:waypoint x="472.0" y="208.0"></omgdi:waypoint>
+        <omgdi:waypoint x="520.0" y="208.0"></omgdi:waypoint>
+        <omgdi:waypoint x="518.0" y="236.0"></omgdi:waypoint>
+        <bpmndi:BPMNLabel>
+          <omgdc:Bounds height="14.0" width="48.0" x="479.0" y="188.0"></omgdc:Bounds>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow63" id="BPMNEdge_flow63">
+        <omgdi:waypoint x="652.0" y="155.0"></omgdi:waypoint>
+        <omgdi:waypoint x="652.0" y="454.0"></omgdi:waypoint>
+        <omgdi:waypoint x="472.0" y="455.0"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow64" id="BPMNEdge_flow64">
+        <omgdi:waypoint x="452.0" y="475.0"></omgdi:waypoint>
+        <omgdi:waypoint x="452.0" y="501.0"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow65" id="BPMNEdge_flow65">
+        <omgdi:waypoint x="454.0" y="333.0"></omgdi:waypoint>
+        <omgdi:waypoint x="452.0" y="360.0"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow66" id="BPMNEdge_flow66">
+        <omgdi:waypoint x="452.0" y="415.0"></omgdi:waypoint>
+        <omgdi:waypoint x="452.0" y="435.0"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow68" id="BPMNEdge_flow68">
+        <omgdi:waypoint x="222.0" y="90.0"></omgdi:waypoint>
+        <omgdi:waypoint x="222.0" y="125.0"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow69" id="BPMNEdge_flow69">
+        <omgdi:waypoint x="222.0" y="180.0"></omgdi:waypoint>
+        <omgdi:waypoint x="222.0" y="201.0"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow71" id="BPMNEdge_flow71">
+        <omgdi:waypoint x="202.0" y="221.0"></omgdi:waypoint>
+        <omgdi:waypoint x="90.0" y="221.0"></omgdi:waypoint>
+        <omgdi:waypoint x="90.0" y="485.0"></omgdi:waypoint>
+        <omgdi:waypoint x="90.0" y="617.0"></omgdi:waypoint>
+        <omgdi:waypoint x="658.0" y="617.0"></omgdi:waypoint>
+        <bpmndi:BPMNLabel>
+          <omgdc:Bounds height="14.0" width="48.0" x="100.0" y="226.0"></omgdc:Bounds>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow73" id="BPMNEdge_flow73">
+        <omgdi:waypoint x="217.0" y="396.0"></omgdi:waypoint>
+        <omgdi:waypoint x="217.0" y="428.0"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow74" id="BPMNEdge_flow74">
+        <omgdi:waypoint x="217.0" y="483.0"></omgdi:waypoint>
+        <omgdi:waypoint x="217.0" y="523.0"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow75" id="BPMNEdge_flow75">
+        <omgdi:waypoint x="222.0" y="241.0"></omgdi:waypoint>
+        <omgdi:waypoint x="222.0" y="271.0"></omgdi:waypoint>
+        <bpmndi:BPMNLabel>
+          <omgdc:Bounds height="14.0" width="24.0" x="227.0" y="240.0"></omgdc:Bounds>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow76" id="BPMNEdge_flow76">
+        <omgdi:waypoint x="222.0" y="311.0"></omgdi:waypoint>
+        <omgdi:waypoint x="217.0" y="341.0"></omgdi:waypoint>
+        <bpmndi:BPMNLabel>
+          <omgdc:Bounds height="14.0" width="24.0" x="227.0" y="311.0"></omgdc:Bounds>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow77" id="BPMNEdge_flow77">
+        <omgdi:waypoint x="202.0" y="291.0"></omgdi:waypoint>
+        <omgdi:waypoint x="132.0" y="291.0"></omgdi:waypoint>
+        <omgdi:waypoint x="132.0" y="552.0"></omgdi:waypoint>
+        <omgdi:waypoint x="165.0" y="550.0"></omgdi:waypoint>
+        <bpmndi:BPMNLabel>
+          <omgdc:Bounds height="14.0" width="36.0" x="151.0" y="272.0"></omgdc:Bounds>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow78" id="BPMNEdge_flow78">
+        <omgdi:waypoint x="380.0" y="291.0"></omgdi:waypoint>
+        <omgdi:waypoint x="380.0" y="314.0"></omgdi:waypoint>
+        <omgdi:waypoint x="434.0" y="313.0"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow79" id="BPMNEdge_flow79">
+        <omgdi:waypoint x="518.0" y="291.0"></omgdi:waypoint>
+        <omgdi:waypoint x="521.0" y="313.0"></omgdi:waypoint>
+        <omgdi:waypoint x="474.0" y="313.0"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow80" id="BPMNEdge_flow80">
+        <omgdi:waypoint x="270.0" y="550.0"></omgdi:waypoint>
+        <omgdi:waypoint x="308.0" y="551.0"></omgdi:waypoint>
+        <omgdi:waypoint x="308.0" y="204.0"></omgdi:waypoint>
+        <omgdi:waypoint x="308.0" y="10.0"></omgdi:waypoint>
+        <omgdi:waypoint x="451.0" y="10.0"></omgdi:waypoint>
+        <omgdi:waypoint x="452.0" y="42.0"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>
