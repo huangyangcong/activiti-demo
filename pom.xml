@@ -7,6 +7,7 @@
 		<version>0.0.1-SNAPSHOT</version>
 	</parent>
 
+
 	<groupId>cn.edu.ahpu.activiti</groupId>
 	<artifactId>activiti-demo</artifactId>
 	<version>0.0.2-SNAPSHOT</version>
